@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import axios from "axios"; // Import axios for API calls
 
 function App() {
   const [regoFile, setRegoFile] = useState(null);
   const [jsonFile, setJsonFile] = useState(null);
-  const [policy, setPolicy] = useState("");
+  const [policy, setPolicy] = useState(""); // New state for policy input
   const [output, setOutput] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -18,46 +17,28 @@ function App() {
   };
 
   const handleEvaluate = async () => {
-    if (!regoFile || !jsonFile || !policy) {
-      setOutput("Please upload both files and enter a policy.");
-      return;
-    }
-
     const formData = new FormData();
     formData.append("regoFile", regoFile);
     formData.append("jsonFile", jsonFile);
-    formData.append("policy", policy);
+    formData.append("policyInput", policy);
 
     try {
-      // Make a POST request to your backend to evaluate the policy
-      const response = await axios.post("http://localhost:5000/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const response = await fetch("http://localhost:5000/evaluate", {
+        method: "POST",
+        body: formData,
       });
-      setOutput(response.data.result || "No result from OPA evaluation.");
+
+      const data = await response.json();
+      setOutput(data.output);
     } catch (error) {
       console.error("Error during evaluation:", error);
-      setOutput("Error evaluating policy.");
+      setOutput("An error occurred during evaluation.");
     }
   };
 
-  const handleAiAssist = async () => {
-    if (!aiPrompt) {
-      setAiOutput("Please enter a prompt for AI assistance.");
-      return;
-    }
-
-    try {
-      // Here you would make an API call to an AI service
-      const response = await axios.post("http://your-ai-api-endpoint", {
-        prompt: aiPrompt,
-      });
-      setAiOutput(response.data.output || "No output from AI.");
-    } catch (error) {
-      console.error("Error getting AI output:", error);
-      setAiOutput("Error getting AI output.");
-    }
+  const handleAiAssist = () => {
+    // Placeholder logic for AI Assist
+    setAiOutput(`AI output for the prompt: "${aiPrompt}"`);
   };
 
   return (
@@ -97,7 +78,7 @@ function App() {
         <textarea
           id="outputText"
           value={output}
-          readOnly
+          onChange={(e) => setOutput(e.target.value)}
           rows="10"
           style={styles.textArea}
         />
@@ -123,7 +104,7 @@ function App() {
           <textarea
             id="aiOutputText"
             value={aiOutput}
-            readOnly
+            onChange={(e) => setAiOutput(e.target.value)}
             rows="6"
             style={styles.textArea}
           />

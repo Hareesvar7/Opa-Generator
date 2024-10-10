@@ -1,9 +1,10 @@
 import React, { useState } from "react";
+import axios from "axios"; // Import axios for API calls
 
 function App() {
   const [regoFile, setRegoFile] = useState(null);
   const [jsonFile, setJsonFile] = useState(null);
-  const [policy, setPolicy] = useState(""); // New state for policy input
+  const [policy, setPolicy] = useState("");
   const [output, setOutput] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -16,14 +17,47 @@ function App() {
     setJsonFile(event.target.files[0]);
   };
 
-  const handleEvaluate = () => {
-    // Add logic to evaluate rego, json files and policy
-    setOutput(`Output from evaluating rego, json, and policy: ${policy}`);
+  const handleEvaluate = async () => {
+    if (!regoFile || !jsonFile || !policy) {
+      setOutput("Please upload both files and enter a policy.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("regoFile", regoFile);
+    formData.append("jsonFile", jsonFile);
+    formData.append("policy", policy);
+
+    try {
+      // Make a POST request to your backend to evaluate the policy
+      const response = await axios.post("http://localhost:5000/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setOutput(response.data.result || "No result from OPA evaluation.");
+    } catch (error) {
+      console.error("Error during evaluation:", error);
+      setOutput("Error evaluating policy.");
+    }
   };
 
-  const handleAiAssist = () => {
-    // Add logic for AI Assist
-    setAiOutput(`AI output for the prompt: "${aiPrompt}"`);
+  const handleAiAssist = async () => {
+    if (!aiPrompt) {
+      setAiOutput("Please enter a prompt for AI assistance.");
+      return;
+    }
+
+    try {
+      // Here you would make an API call to an AI service
+      const response = await axios.post("http://your-ai-api-endpoint", {
+        prompt: aiPrompt,
+      });
+      setAiOutput(response.data.output || "No output from AI.");
+    } catch (error) {
+      console.error("Error getting AI output:", error);
+      setAiOutput("Error getting AI output.");
+    }
   };
 
   return (
@@ -63,7 +97,7 @@ function App() {
         <textarea
           id="outputText"
           value={output}
-          onChange={(e) => setOutput(e.target.value)}
+          readOnly
           rows="10"
           style={styles.textArea}
         />
@@ -89,7 +123,7 @@ function App() {
           <textarea
             id="aiOutputText"
             value={aiOutput}
-            onChange={(e) => setAiOutput(e.target.value)}
+            readOnly
             rows="6"
             style={styles.textArea}
           />

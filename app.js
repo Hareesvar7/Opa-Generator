@@ -3,6 +3,7 @@ import React, { useState } from "react";
 function App() {
   const [regoFile, setRegoFile] = useState(null);
   const [jsonFile, setJsonFile] = useState(null);
+  const [policy, setPolicy] = useState(""); // New state for policy input
   const [output, setOutput] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -16,8 +17,8 @@ function App() {
   };
 
   const handleEvaluate = () => {
-    // Add logic to evaluate rego and json files
-    setOutput("Output from evaluating rego and json files...");
+    // Add logic to evaluate rego, json files and policy
+    setOutput(`Output from evaluating rego, json, and policy: ${policy}`);
   };
 
   const handleAiAssist = () => {
@@ -38,6 +39,18 @@ function App() {
         <div style={styles.fileInput}>
           <label htmlFor="jsonFile" style={styles.label}>Upload JSON File:</label>
           <input type="file" id="jsonFile" onChange={handleJsonFileChange} style={styles.input} />
+        </div>
+
+        <div style={styles.textInput}>
+          <label htmlFor="policyInput" style={styles.label}>Policy:</label>
+          <input
+            type="text"
+            id="policyInput"
+            value={policy}
+            onChange={(e) => setPolicy(e.target.value)}
+            style={styles.textInputField}
+            placeholder="Enter policy here"
+          />
         </div>
 
         <button onClick={handleEvaluate} style={styles.button}>
@@ -102,6 +115,17 @@ const styles = {
   fileInput: {
     marginBottom: "10px",
     width: "100%",
+  },
+  textInput: {
+    marginBottom: "10px",
+    width: "100%",
+  },
+  textInputField: {
+    width: "100%",
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    fontSize: "14px",
   },
   input: {
     width: "100%",

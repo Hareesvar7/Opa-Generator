@@ -1,4 +1,3 @@
-
 const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
@@ -104,4 +103,18 @@ async function* generateAiResponse(prompt) {
 
     // Check if data.choices exists and has at least one element
     if (!data.choices || data.choices.length === 0) {
-        throw
+        throw new Error("No choices returned from OpenAI API.");
+    }
+
+    const output = data.choices[0].text.trim();
+
+    // Yield the output in chunks (you can modify chunk size)
+    for (let i = 0; i < output.length; i += 50) {
+        yield output.slice(i, i + 50);  // Yield 50 characters at a time
+    }
+}
+
+// Start the server
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});

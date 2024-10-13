@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
-const { Configuration, OpenAIApi } = require("openai");
+const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
@@ -12,21 +12,24 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// Set up OpenAI
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
 // Handle AI Assist
 app.post("/ai-assist", async (req, res) => {
     const { prompt } = req.body;
 
     try {
-        const response = await openai.createChatCompletion({
-            model: "gpt-3.5-turbo",
-            messages: [{ role: "user", content: prompt }],
-        });
+        const response = await axios.post(
+            "https://api.openai.com/v1/chat/completions",
+            {
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: prompt }],
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`, // Use your OpenAI API key
+                },
+            }
+        );
 
         const aiOutput = response.data.choices[0].message.content;
         res.json({ aiOutput });

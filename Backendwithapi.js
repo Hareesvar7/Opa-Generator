@@ -4,15 +4,15 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const OpenAIApi = require("openai"); // Directly importing OpenAIApi
+const OpenAIApi = require("openai"); // Correct import
 require('dotenv').config(); // Load environment variables
 
 const app = express();
 const PORT = 5000;
 
-// Set up your OpenAI API key directly from environment variables
+// Set up OpenAI API key
 const openai = new OpenAIApi({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure you have your OpenAI API key set in your .env file
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Middleware
@@ -25,23 +25,19 @@ const upload = multer({ storage });
 
 // Handle policy evaluation (existing logic)
 app.post("/evaluate", upload.fields([{ name: "regoFile" }, { name: "jsonFile" }]), (req, res) => {
-    const regoFileContent = req.files.regoFile[0].buffer.toString(); // Rego file content
-    const jsonFileContent = req.files.jsonFile[0].buffer.toString(); // JSON file content
-    const policyInput = req.body.policyInput; // Policy input from user
+    const regoFileContent = req.files.regoFile[0].buffer.toString();
+    const jsonFileContent = req.files.jsonFile[0].buffer.toString();
+    const policyInput = req.body.policyInput;
 
-    // Save Rego and JSON files temporarily to disk
     const regoFilePath = path.join(__dirname, "temp_policy.rego");
     const jsonFilePath = path.join(__dirname, "temp_plan.json");
 
     fs.writeFileSync(regoFilePath, regoFileContent);
     fs.writeFileSync(jsonFilePath, jsonFileContent);
 
-    // OPA eval command based on user input
     const opaCommand = `opa eval -i ${jsonFilePath} -d ${regoFilePath} "${policyInput}"`;
 
-    // Execute the OPA command
     exec(opaCommand, (error, stdout, stderr) => {
-        // Clean up temporary files
         fs.unlinkSync(regoFilePath);
         fs.unlinkSync(jsonFilePath);
 
@@ -50,7 +46,6 @@ app.post("/evaluate", upload.fields([{ name: "regoFile" }, { name: "jsonFile" }]
             return res.status(500).json({ error: "Error evaluating the policy." });
         }
 
-        // Send the result back to the frontend
         res.json({ output: stdout });
     });
 });
@@ -61,17 +56,16 @@ app.post("/ai-assist", async (req, res) => {
 
     try {
         // Call OpenAI's GPT-3.5 API
-        const response = await openai.createCompletion({
-            model: "gpt-3.5-turbo", // Model name
+        const response = await openai.completions.create({
+            model: "gpt-3.5-turbo",
             prompt: prompt,
-            max_tokens: 150, // Adjust token limit as needed
-            n: 1, // Number of completions to return
-            stop: null, // Set to stop at the default completion length
-            temperature: 0.7, // Adjust the creativity level
+            max_tokens: 150,
+            n: 1,
+            stop: null,
+            temperature: 0.7,
         });
 
-        // Send the response back to the frontend
-        const aiOutput = response.data.choices[0].text.trim();
+        const aiOutput = response.choices[0].text.trim();
         res.json({ aiOutput });
     } catch (error) {
         console.error("Error with OpenAI API:", error);

@@ -4,17 +4,11 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { Configuration, OpenAIApi } = require("openai"); // Updated import
+const axios = require("axios"); // Use axios for API requests
 require('dotenv').config(); // Load environment variables
 
 const app = express();
 const PORT = 5000;
-
-// Set up OpenAI API key
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY, // Ensure API key is correctly loaded from .env
-});
-const openai = new OpenAIApi(configuration);
 
 // Middleware
 app.use(cors());
@@ -56,20 +50,27 @@ app.post("/ai-assist", async (req, res) => {
     const { prompt } = req.body;
 
     try {
-        // Call OpenAI's GPT-3.5 API
-        const response = await openai.createCompletion({
-            model: "gpt-3.5-turbo", // Use the correct model
-            prompt: prompt,
-            max_tokens: 150,
-            n: 1,
-            stop: null,
-            temperature: 0.7,
-        });
+        // Call OpenAI API directly using axios
+        const response = await axios.post(
+            "https://api.openai.com/v1/completions",
+            {
+                model: "gpt-3.5-turbo", // Specify the correct model
+                prompt: prompt,
+                max_tokens: 150,
+                temperature: 0.7,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, // Pass API key in header
+                    "Content-Type": "application/json",
+                },
+            }
+        );
 
         const aiOutput = response.data.choices[0].text.trim();
         res.json({ aiOutput });
     } catch (error) {
-        console.error("Error with OpenAI API:", error);
+        console.error("Error with OpenAI API:", error.response ? error.response.data : error.message);
         res.status(500).json({ error: "Error generating AI response." });
     }
 });

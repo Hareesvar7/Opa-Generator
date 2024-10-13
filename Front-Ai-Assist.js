@@ -7,6 +7,10 @@ const handleAiAssist = async () => {
         setAiOutput(response.data.aiOutput);
     } catch (error) {
         console.error("Error during AI assist:", error);
-        setAiOutput("An error occurred while fetching AI response.");
+        if (error.response) {
+            setAiOutput(error.response.data.error || "An error occurred while fetching AI response.");
+        } else {
+            setAiOutput("An error occurred while fetching AI response.");
+        }
     }
 };

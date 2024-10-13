@@ -4,15 +4,16 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { Configuration, OpenAIApi } = require("openai"); // OpenAI import
+const OpenAIApi = require("openai"); // Directly importing OpenAIApi
+require('dotenv').config(); // Load environment variables
 
 const app = express();
 const PORT = 5000;
 
-// Set your OpenAI API key here
-const openai = new OpenAIApi(new Configuration({
-  apiKey: process.env.OPENAI_API_KEY, // Store your key in an environment variable
-}));
+// Set up your OpenAI API key directly from environment variables
+const openai = new OpenAIApi({
+  apiKey: process.env.OPENAI_API_KEY, // Ensure you have your OpenAI API key set in your .env file
+});
 
 // Middleware
 app.use(cors());

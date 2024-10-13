@@ -4,16 +4,17 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const OpenAIApi = require("openai"); // Correct import
+const { Configuration, OpenAIApi } = require("openai"); // Updated import
 require('dotenv').config(); // Load environment variables
 
 const app = express();
 const PORT = 5000;
 
 // Set up OpenAI API key
-const openai = new OpenAIApi({
-  apiKey: process.env.OPENAI_API_KEY,
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY, // Ensure API key is correctly loaded from .env
 });
+const openai = new OpenAIApi(configuration);
 
 // Middleware
 app.use(cors());
@@ -56,8 +57,8 @@ app.post("/ai-assist", async (req, res) => {
 
     try {
         // Call OpenAI's GPT-3.5 API
-        const response = await openai.completions.create({
-            model: "gpt-3.5-turbo",
+        const response = await openai.createCompletion({
+            model: "gpt-3.5-turbo", // Use the correct model
             prompt: prompt,
             max_tokens: 150,
             n: 1,
@@ -65,7 +66,7 @@ app.post("/ai-assist", async (req, res) => {
             temperature: 0.7,
         });
 
-        const aiOutput = response.choices[0].text.trim();
+        const aiOutput = response.data.choices[0].text.trim();
         res.json({ aiOutput });
     } catch (error) {
         console.error("Error with OpenAI API:", error);

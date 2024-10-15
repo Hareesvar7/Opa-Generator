@@ -1,23 +1,25 @@
 const handleAiAssist = async () => {
-    setLoading(true); // Start loading
     try {
-        const response = await axios.post("http://localhost:5000/ai-assist", {
-            prompt: aiPrompt,
+        const response = await fetch("http://localhost:5000/ai-assist", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                prompt: aiPrompt,  // Ensure prompt is being passed from state
+            }),
         });
 
-        setAiOutput(response.data.aiOutput);
-    } catch (error) {
-        console.error("Error during AI assist:", error);
-        if (error.response) {
-            if (error.response.status === 429) {
-                setAiOutput("Rate limit exceeded. Please try again later.");
-            } else {
-                setAiOutput(error.response.data.error || "An error occurred while fetching AI response.");
-            }
+        const data = await response.json();
+
+        if (data.aiOutput) {
+            setAiOutput(data.aiOutput);  // Set AI output if successful
         } else {
-            setAiOutput("An error occurred while fetching AI response.");
+            console.error("Error from backend:", data.error);
+            setAiOutput(`Error: ${data.error}`);  // Display error if any
         }
-    } finally {
-        setLoading(false); // End loading
+    } catch (error) {
+        console.error("Error during AI Assist:", error);
+        setAiOutput("An error occurred during AI Assist.");
     }
 };

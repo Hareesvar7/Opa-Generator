@@ -61,10 +61,10 @@ app.post("/ai-assist", async (req, res) => {
 
     try {
         const response = await axios.post(
-            "https://api.openai.com/v1/completions",
+            "https://api.openai.com/v1/chat/completions", // Updated endpoint for chat models
             {
-                model: "gpt-4",  // Specify GPT-4 or use gpt-3.5-turbo if GPT-4 is not available
-                prompt: prompt,
+                model: "gpt-4",  // Specify GPT-4
+                messages: [{ role: "user", content: prompt }], // Format the input as messages
                 max_tokens: 150,  // Ensure this value is provided to control token length
                 temperature: 0.7,  // Optional but recommended for creative outputs
             },
@@ -76,7 +76,7 @@ app.post("/ai-assist", async (req, res) => {
             }
         );
 
-        res.json({ aiOutput: response.data.choices[0].text.trim() });
+        res.json({ aiOutput: response.data.choices[0].message.content.trim() }); // Access the message content from the response
     } catch (error) {
         console.error("Error with AI Assist:", error.response ? error.response.data : error.message);
         

@@ -2,7 +2,9 @@ const express = require("express");
 const multer = require("multer");
 const cors = require("cors");
 const axios = require("axios");
-require("dotenv").config(); // Make sure dotenv is required to load environment variables
+const fs = require("fs");
+const path = require("path");
+require("dotenv").config();  // Load environment variables from .env
 
 const app = express();
 const PORT = 5000;
@@ -11,46 +13,78 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// Handle AI assist
-app.post("/ai-assist", async (req, res) => {
-    const { prompt } = req.body; // Get the prompt from the request body
-    const maxRetries = 5; // Maximum number of retries
-    let retries = 0;
-    let aiOutput;
+// Set up Multer for file uploads (in-memory storage)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
-    while (retries < maxRetries) {
-        try {
-            const response = await axios.post(
-                "https://api.openai.com/v1/chat/completions",
-                {
-                    model: "gpt-3.5-turbo",
-                    messages: [{ role: "user", content: prompt }],
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-                    },
-                }
-            );
+// Handle policy evaluation
+app.post("/evaluate", upload.fields([{ name: "regoFile" }, { name: "jsonFile" }]), (req, res) => {
+    const regoFileContent = req.files.regoFile[0].buffer.toString(); // Rego file content
+    const jsonFileContent = req.files.jsonFile[0].buffer.toString(); // JSON file content
+    const policyInput = req.body.policyInput; // Policy input from user
 
-            aiOutput = response.data.choices[0].message.content;
-            return res.json({ aiOutput }); // Send response if successful
-        } catch (error) {
-            if (error.response && error.response.status === 429) {
-                console.error("429 Rate Limit Exceeded:", error.response.data);
-                const delay = Math.pow(2, retries) * 1000; // Exponential backoff delay
-                await new Promise((resolve) => setTimeout(resolve, delay)); // Wait before retrying
-                retries++;
-            } else {
-                console.error("Error calling OpenAI API:", error);
-                return res.status(error.response ? error.response.status : 500).json({ error: "Internal server error." });
-            }
+    // Save Rego and JSON files temporarily to disk
+    const regoFilePath = path.join(__dirname, "temp_policy.rego");
+    const jsonFilePath = path.join(__dirname, "temp_plan.json");
+
+    fs.writeFileSync(regoFilePath, regoFileContent);
+    fs.writeFileSync(jsonFilePath, jsonFileContent);
+
+    // OPA eval command based on user input
+    const opaCommand = `opa eval -i ${jsonFilePath} -d ${regoFilePath} "${policyInput}"`;
+
+    // Execute the OPA command
+    const { exec } = require("child_process");
+    exec(opaCommand, (error, stdout, stderr) => {
+        // Clean up temporary files
+        fs.unlinkSync(regoFilePath);
+        fs.unlinkSync(jsonFilePath);
+
+        if (error) {
+            console.error(`Error: ${stderr}`);
+            return res.status(500).json({ error: "Error evaluating the policy." });
         }
+
+        // Send the result back to the frontend
+        res.json({ output: stdout });
+    });
+});
+
+// Handle AI Assist with GPT-4
+app.post("/ai-assist", async (req, res) => {
+    const { prompt } = req.body;
+
+    // Check if prompt is provided
+    if (!prompt) {
+        return res.status(400).json({ error: "Missing required parameter: prompt" });
     }
 
-    // If we've exhausted all retries, respond with an error
-    return res.status(429).json({ error: "Rate limit exceeded. Please try again later." });
+    try {
+        const response = await axios.post(
+            "https://api.openai.com/v1/completions",
+            {
+                model: "gpt-4",  // Specify GPT-4 or use gpt-3.5-turbo if GPT-4 is not available
+                prompt: prompt,
+                max_tokens: 150,  // Ensure this value is provided to control token length
+                temperature: 0.7,  // Optional but recommended for creative outputs
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        res.json({ aiOutput: response.data.choices[0].text.trim() });
+    } catch (error) {
+        console.error("Error with AI Assist:", error.response ? error.response.data : error.message);
+        
+        // Return a detailed error message to the frontend
+        res.status(error.response ? error.response.status : 500).json({
+            error: error.response ? error.response.data.error.message : "Internal Server Error",
+        });
+    }
 });
 
 // Start the server

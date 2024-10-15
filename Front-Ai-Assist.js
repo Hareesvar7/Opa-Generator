@@ -10,6 +10,12 @@ const handleAiAssist = async () => {
             }),
         });
 
+        if (!response.ok) {
+            // If response is not OK, throw an error
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Unknown error occurred");
+        }
+
         const data = await response.json();
 
         if (data.aiOutput) {

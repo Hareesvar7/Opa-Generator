@@ -1,8 +1,7 @@
 const express = require("express");
-const multer = require("multer");
 const cors = require("cors");
 const axios = require("axios");
-require("dotenv").config(); // Make sure dotenv is required to load environment variables
+require("dotenv").config(); // Load OpenAI API key from .env
 
 const app = express();
 const PORT = 5000;
@@ -11,46 +10,31 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// Handle AI assist
+// AI Assist Route using OpenAI API
 app.post("/ai-assist", async (req, res) => {
-    const { prompt } = req.body; // Get the prompt from the request body
-    const maxRetries = 5; // Maximum number of retries
-    let retries = 0;
-    let aiOutput;
+    const { prompt } = req.body; // Get prompt from frontend
 
-    while (retries < maxRetries) {
-        try {
-            const response = await axios.post(
-                "https://api.openai.com/v1/chat/completions",
-                {
-                    model: "gpt-3.5-turbo",
-                    messages: [{ role: "user", content: prompt }],
+    try {
+        const response = await axios.post(
+            "https://api.openai.com/v1/completions",
+            {
+                model: "text-davinci-003", // Use OpenAI GPT-3.5 model
+                prompt: prompt,
+                max_tokens: 150, // Adjust token count as per your need
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, // Use API key from .env
+                    "Content-Type": "application/json",
                 },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-                    },
-                }
-            );
-
-            aiOutput = response.data.choices[0].message.content;
-            return res.json({ aiOutput }); // Send response if successful
-        } catch (error) {
-            if (error.response && error.response.status === 429) {
-                console.error("429 Rate Limit Exceeded:", error.response.data);
-                const delay = Math.pow(2, retries) * 1000; // Exponential backoff delay
-                await new Promise((resolve) => setTimeout(resolve, delay)); // Wait before retrying
-                retries++;
-            } else {
-                console.error("Error calling OpenAI API:", error);
-                return res.status(error.response ? error.response.status : 500).json({ error: "Internal server error." });
             }
-        }
-    }
+        );
 
-    // If we've exhausted all retries, respond with an error
-    return res.status(429).json({ error: "Rate limit exceeded. Please try again later." });
+        res.json({ aiOutput: response.data.choices[0].text.trim() }); // Send AI response to frontend
+    } catch (error) {
+        console.error("Error in AI assist:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to get AI output." });
+    }
 });
 
 // Start the server
